@@ -113,8 +113,8 @@ export const getEmployeeById = async (req, res) => {
 // UPDATE (partial-safe)
 export const updateEmployee = async (req, res) => {
   const { empid } = req.params;
-  const profileFields = ["empid", "name", "email", "role", "cluster", "location"];
-  const detailScalarFields = ["current_project", "availability", "hours_available", "from_date", "to_date"];
+  const profileFields = ["empid", "name", "email", "role", "cluster"];
+  const detailScalarFields = ["current_project", "availability", "hours_available", "from_date", "to_date", "stars"];
   try {
     // fetch existing
     const { data: findData, error: findError } = await supabase
@@ -174,22 +174,26 @@ export const updateEmployee = async (req, res) => {
     }
 
     // Validation around Partially Available
-    const finalAvailability = updatePayload.availability !== undefined ? updatePayload.availability : existing.availability;
-    const hoursProvided = updatePayload.hours_available !== undefined ? updatePayload.hours_available : existing.hours_available;
-    const fromProvided = updatePayload.from_date !== undefined ? updatePayload.from_date : existing.from_date;
-    const toProvided = updatePayload.to_date !== undefined ? updatePayload.to_date : existing.to_date;
+    const isAvailabilityUpdate = ["availability", "hours_available", "from_date", "to_date"].some(k => Object.prototype.hasOwnProperty.call(updatePayload, k));
 
-    if (finalAvailability !== "Partially Available") {
-      // Auto-cleanup: if not partial, these must be null
-      if (hoursProvided || fromProvided || toProvided) {
-        updatePayload.hours_available = null;
-        updatePayload.from_date = null;
-        updatePayload.to_date = null;
-      }
-    } else {
-      // If Partial, ensure we have values (either in update or existing)
-      if (!hoursProvided || !fromProvided || !toProvided) {
-        return res.status(400).json({ error: 'Hours, from date, and to date are required for "Partially Available"' });
+    if (isAvailabilityUpdate) {
+      const finalAvailability = updatePayload.availability !== undefined ? updatePayload.availability : existing.availability;
+      const hoursProvided = updatePayload.hours_available !== undefined ? updatePayload.hours_available : existing.hours_available;
+      const fromProvided = updatePayload.from_date !== undefined ? updatePayload.from_date : existing.from_date;
+      const toProvided = updatePayload.to_date !== undefined ? updatePayload.to_date : existing.to_date;
+
+      if (finalAvailability !== "Partially Available") {
+        // Auto-cleanup: if not partial, these must be null
+        if (hoursProvided || fromProvided || toProvided) {
+          updatePayload.hours_available = null;
+          updatePayload.from_date = null;
+          updatePayload.to_date = null;
+        }
+      } else {
+        // If Partial, ensure we have values (either in update or existing)
+        if (!hoursProvided || !fromProvided || !toProvided) {
+          return res.status(400).json({ error: 'Hours, from date, and to date are required for "Partially Available"' });
+        }
       }
     }
 
