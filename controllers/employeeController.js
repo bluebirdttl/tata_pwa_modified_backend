@@ -58,7 +58,10 @@ const normalizeListForStore = (val) => {
 export const getAllEmployees = async (req, res) => {
   const { search = "", availability = "" } = req.query;
   try {
-    const { data: employees, error } = await supabase.from('employees').select('*');
+    const { data: employees, error } = await supabase
+      .from('employees')
+      .select('*')
+      .order('empid', { ascending: true });
 
     if (error) throw error;
 
@@ -112,6 +115,7 @@ export const getEmployeeById = async (req, res) => {
 
 // UPDATE (partial-safe)
 export const updateEmployee = async (req, res) => {
+  console.log("updateEmployee HIT!", req.params, req.body);
   const { empid } = req.params;
   const profileFields = ["empid", "name", "email", "role", "cluster"];
   const detailScalarFields = ["current_project", "availability", "hours_available", "from_date", "to_date", "stars"];
@@ -127,7 +131,24 @@ export const updateEmployee = async (req, res) => {
     const existing = findData[0];
 
     const body = req.body || {};
+    console.log("Update Body:", body);
     const updatePayload = {};
+
+    // NUCLEAR DEBUG: Direct Star Update
+    if (body.stars !== undefined) {
+      console.log("Direct Star Update Triggered:", body.stars);
+      const { data: starData, error: starError } = await supabase
+        .from('employees')
+        .update({ stars: body.stars })
+        .eq('empid', empid)
+        .select();
+
+      if (starError) {
+        console.error("Star Update Error:", starError);
+        return res.status(500).json({ error: starError.message });
+      }
+      return res.json({ success: true, message: "Star updated directly", data: starData });
+    }
 
     // DEBUG: ISOLATION - Only update name
     // if (body.name) updatePayload.name = body.name;
@@ -169,12 +190,22 @@ export const updateEmployee = async (req, res) => {
       if (body.noCurrentProject) updatePayload.current_project = "";
     }
 
+    // Explicitly handle stars to ensure it's captured
+    if (body.stars !== undefined) {
+      updatePayload.stars = body.stars;
+    }
+
+    console.log("Final Update Payload:", updatePayload);
+
     if (Object.keys(updatePayload).length === 0) {
-      return res.status(400).json({ error: "No valid fields provided for update" });
+      console.warn("Update payload is empty! Body was:", body);
+      // return res.status(400).json({ error: "No valid fields provided for update" });
     }
 
     // Validation around Partially Available
     const isAvailabilityUpdate = ["availability", "hours_available", "from_date", "to_date"].some(k => Object.prototype.hasOwnProperty.call(updatePayload, k));
+    console.log("Update Payload:", updatePayload);
+    console.log("isAvailabilityUpdate:", isAvailabilityUpdate);
 
     if (isAvailabilityUpdate) {
       const finalAvailability = updatePayload.availability !== undefined ? updatePayload.availability : existing.availability;
@@ -225,5 +256,32 @@ export const updateEmployee = async (req, res) => {
   } catch (err) {
     console.error("Update employee error →", err);
     res.status(500).json({ error: "Supabase update error", details: err.message || err });
+  }
+};
+
+// UPDATE STARS ONLY
+export const updateEmployeeStars = async (req, res) => {
+  const { empid } = req.params;
+  const { stars } = req.body;
+
+  console.log(`updateEmployeeStars HIT! empid: ${empid}, stars: ${stars}`);
+
+  if (stars === undefined) {
+    return res.status(400).json({ error: "Stars value is required" });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('employees')
+      .update({ stars })
+      .eq('empid', empid)
+      .select();
+
+    if (error) throw error;
+
+    res.json({ success: true, message: "Stars updated successfully", data });
+  } catch (err) {
+    console.error("Star update error →", err);
+    res.status(500).json({ error: "Failed to update stars" });
   }
 };
