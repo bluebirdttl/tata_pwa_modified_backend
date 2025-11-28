@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import employeeRoutes from './routes/employeeRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import projectRoutes from './routes/projectRoutes.js';
 // import sheetDB from "./db/connection.js";
 
 dotenv.config();
@@ -23,6 +24,12 @@ app.use(cors({
 
 app.use(express.json());
 
+// Request Logging Middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 // -----------------------------
 // Backend Health Check
 // -----------------------------
@@ -35,6 +42,13 @@ app.get('/', (req, res) => {
 // -----------------------------
 app.use('/api/employees', employeeRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
+
+// 404 Handler
+app.use((req, res) => {
+    console.log(`[404] Route not found: ${req.method} ${req.url}`);
+    res.status(404).send('Route not found');
+});
 
 // -----------------------------
 // Start Server

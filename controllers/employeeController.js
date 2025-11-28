@@ -115,7 +115,7 @@ export const getEmployeeById = async (req, res) => {
 
 // UPDATE (partial-safe)
 export const updateEmployee = async (req, res) => {
-  console.log("updateEmployee HIT!", req.params, req.body);
+  // console.log("updateEmployee HIT!", req.params, req.body);
   const { empid } = req.params;
   const profileFields = ["empid", "name", "email", "role", "cluster"];
   const detailScalarFields = ["current_project", "availability", "hours_available", "from_date", "to_date", "stars"];
@@ -131,12 +131,12 @@ export const updateEmployee = async (req, res) => {
     const existing = findData[0];
 
     const body = req.body || {};
-    console.log("Update Body:", body);
+    // console.log("Update Body:", body);
     const updatePayload = {};
 
     // NUCLEAR DEBUG: Direct Star Update
     if (body.stars !== undefined) {
-      console.log("Direct Star Update Triggered:", body.stars);
+      // console.log("Direct Star Update Triggered:", body.stars);
       const { data: starData, error: starError } = await supabase
         .from('employees')
         .update({ stars: body.stars })
@@ -195,7 +195,7 @@ export const updateEmployee = async (req, res) => {
       updatePayload.stars = body.stars;
     }
 
-    console.log("Final Update Payload:", updatePayload);
+    // console.log("Final Update Payload:", updatePayload);
 
     if (Object.keys(updatePayload).length === 0) {
       console.warn("Update payload is empty! Body was:", body);
@@ -204,8 +204,8 @@ export const updateEmployee = async (req, res) => {
 
     // Validation around Partially Available
     const isAvailabilityUpdate = ["availability", "hours_available", "from_date", "to_date"].some(k => Object.prototype.hasOwnProperty.call(updatePayload, k));
-    console.log("Update Payload:", updatePayload);
-    console.log("isAvailabilityUpdate:", isAvailabilityUpdate);
+    // console.log("Update Payload:", updatePayload);
+    // console.log("isAvailabilityUpdate:", isAvailabilityUpdate);
 
     if (isAvailabilityUpdate) {
       const finalAvailability = updatePayload.availability !== undefined ? updatePayload.availability : existing.availability;
@@ -264,7 +264,7 @@ export const updateEmployeeStars = async (req, res) => {
   const { empid } = req.params;
   const { stars } = req.body;
 
-  console.log(`updateEmployeeStars HIT! empid: ${empid}, stars: ${stars}`);
+  // console.log(`updateEmployeeStars HIT! empid: ${empid}, stars: ${stars}`);
 
   if (stars === undefined) {
     return res.status(400).json({ error: "Stars value is required" });
@@ -287,7 +287,7 @@ export const updateEmployeeStars = async (req, res) => {
 };
 // GET DASHBOARD METRICS
 export const getDashboardMetrics = async (req, res) => {
-  console.log("getDashboardMetrics HIT!");
+  // console.log("getDashboardMetrics HIT!");
   try {
     // Fetch only necessary fields to minimize data transfer
     const { data: employees, error } = await supabase
