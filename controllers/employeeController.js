@@ -285,3 +285,51 @@ export const updateEmployeeStars = async (req, res) => {
     res.status(500).json({ error: "Failed to update stars" });
   }
 };
+// GET DASHBOARD METRICS
+export const getDashboardMetrics = async (req, res) => {
+  console.log("getDashboardMetrics HIT!");
+  try {
+    // Fetch only necessary fields to minimize data transfer
+    const { data: employees, error } = await supabase
+      .from('employees')
+      .select('cluster, role, availability, hours_available');
+
+    if (error) throw error;
+
+    // Initialize metrics
+    const metrics = {
+      partialHoursDistribution: {},
+      clusters: { "MEBM": 0, "M&T": 0, "S&PS Insitu": 0, "S&PS Exsitu": 0 },
+      roles: {}
+    };
+
+    employees.forEach(emp => {
+      // 1. Partial Hours
+      if (emp.availability === "Partially Available" && emp.hours_available) {
+        const label = String(emp.hours_available).trim();
+        metrics.partialHoursDistribution[label] = (metrics.partialHoursDistribution[label] || 0) + 1;
+      }
+
+      // 2. Clusters
+      const empCluster = (emp.cluster || "").trim();
+      if (metrics.clusters.hasOwnProperty(empCluster)) {
+        metrics.clusters[empCluster]++;
+      } else if (empCluster) {
+        // Case-insensitive match
+        const key = Object.keys(metrics.clusters).find(k => k.toLowerCase() === empCluster.toLowerCase());
+        if (key) {
+          metrics.clusters[key]++;
+        }
+      }
+
+      // 3. Roles
+      const r = (emp.role || "Unknown").trim();
+      metrics.roles[r] = (metrics.roles[r] || 0) + 1;
+    });
+
+    res.json(metrics);
+  } catch (err) {
+    console.error("Dashboard metrics error →", err);
+    res.status(500).json({ error: "Failed to fetch dashboard metrics" });
+  }
+};
