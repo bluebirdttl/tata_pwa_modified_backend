@@ -82,6 +82,49 @@ export const updateProjectStatus = async (req, res) => {
     }
 };
 
+// Update entire project
+export const updateProject = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            project_name,
+            leader_name,
+            required_skills,
+            end_date,
+            status,
+            description
+        } = req.body;
+
+        // Ensure required_skills is an array
+        let skillsArray = [];
+        if (Array.isArray(required_skills)) {
+            skillsArray = required_skills;
+        } else if (typeof required_skills === 'string') {
+            skillsArray = required_skills.split(',').map(s => s.trim()).filter(s => s);
+        }
+
+        const { data, error } = await supabase
+            .from('projects')
+            .update({
+                project_name,
+                leader_name,
+                required_skills: skillsArray,
+                end_date,
+                status,
+                description
+            })
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        res.status(200).json(data[0]);
+    } catch (error) {
+        console.error("Error updating project:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // Delete project
 export const deleteProject = async (req, res) => {
     try {
